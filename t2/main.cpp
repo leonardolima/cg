@@ -12,12 +12,14 @@
 // Standard libs
 #include <iostream>
 #include <stdio.h>
+#include <cmath.h>
 // Header files
 #include "objLoader.h"
 #include "mygl.h"
 
 #define IMAGE_WIDTH 512
 #define IMAGE_HEIGHT 512
+#define PI 3.14159265
 
 // Ponteiro para o objeto que carregará o modelo 3D (formato OBJ).
 objLoader *objData;
@@ -119,6 +121,15 @@ GLuint tex;
 
 void (*DrawFunc)(glm::vec4 v1, glm::vec4 v2);
 
+float angle = 0.0f;
+
+float new_angle(float old)
+{
+	float _new = old + 0.001f;
+	if (_new > 360.0f) _new = 0.0f;
+	return _new;
+}
+
 glm::vec4 pipeline(glm::vec3 camera_pos, 
 		   glm::vec3 camera_lookat, 
 		   glm::vec3 camera_up, 
@@ -127,10 +138,12 @@ glm::vec4 pipeline(glm::vec3 camera_pos,
 	///////////////////////////////////////////////////////////////////////////
 	// Matriz model (Identidade)
 	///////////////////////////////////////////////////////////////////////////
+	angle = new_angle(angle);
+
 	float array_Model[4][4] = { 
-		{1.0f, 0.0f, 0.0f, 0.0f},
+		{cosf((angle*PI)/180), 0.0f, -sinf((angle*PI)/180), 0.0f},
 		{0.0f, 1.0f, 0.0f, 0.0f},
-		{0.0f, 0.0f, 1.0f, 0.0f},
+		{sinf((angle*PI)/180), 0.0f, cos((angle*PI)/180), 0.0f},
 		{0.0f, 0.0f, 0.0f, 1.0f}
 	};
 	glm::mat4 Model;
@@ -232,10 +245,10 @@ glm::vec4 pipeline(glm::vec3 camera_pos,
 	S2 = glm::transpose(S2);
 
 	glm::mat4 ViewPort = S2 * T2 * S1;
-	return ViewPort * v_canonic;
-	//glm::vec4 v_screen = glm::round(ViewPort * v_canonic);
 
-	//return v_screen;
+	glm::vec4 v_screen = glm::round(ViewPort * v_canonic);
+
+	return v_screen;
 }
 
 void MyGlDraw(glm::vec4 v1, glm::vec4 v2)
@@ -259,9 +272,20 @@ void MyGlDraw(glm::vec4 v1, glm::vec4 v2)
 	drawLine(p1, p2);
 }
 
+void clearFBptr(void)
+{
+	for (unsigned int i = 0; i < IMAGE_WIDTH * IMAGE_HEIGHT ; i++)
+	{
+		FBptr[i*4]   = 0;
+		FBptr[i*4+1] = 0;
+		FBptr[i*4+2] = 0;
+		FBptr[i*4+3] = 255;
+	}
+}
+
 void display_with_pipeline(void)
 {
-	glm::vec3 camera_pos = glm::vec3(0.0f, 0.0f, 2.0f);
+	glm::vec3 camera_pos = glm::vec3(0.0f, 0.0f, 2.2f);
 	glm::vec3 camera_lookat = glm::vec3(0.0f, 0.0f, 0.0f);
 	glm::vec3 camera_up = glm::vec3(0.0f, 1.0f, 0.0f);
 
@@ -272,7 +296,9 @@ void display_with_pipeline(void)
 	///////////////////////////////////////////////////////////////////////////
 	glViewport(0, 0, ViewPortWidth, ViewPortHeight);
 
+	clearFBptr();
 	glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glLoadIdentity();
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
 	glMatrixMode(GL_PROJECTION);
@@ -336,10 +362,6 @@ void display_with_pipeline(void)
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, IMAGE_WIDTH, IMAGE_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, FBptr);
 
 	glEnable(GL_TEXTURE_2D);
-
-	// Desenha o quadrilátero com a textura mapeada
-	glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
 	glColor3f(1.0f, 1.0f, 1.0f);
 
